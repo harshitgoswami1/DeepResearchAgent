@@ -3,9 +3,6 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { MarkdownReport } from "./components/markdown-report";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
-
 const starterPrompts = [
   "Tell me about Claude Mythos",
   "Latest AI browser agents",
@@ -452,14 +449,21 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/research`, {
+      const response = await fetch("/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: trimmedTopic }),
       });
 
       if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
+        const errorPayload = (await response.json().catch(() => null)) as
+          | { error?: string; details?: string }
+          | null;
+        throw new Error(
+          errorPayload?.details ||
+            errorPayload?.error ||
+            `Request failed with status ${response.status}`,
+        );
       }
 
       const result = (await response.json()) as ResearchResponse;
@@ -485,7 +489,7 @@ export default function Home() {
           id: createId(),
           role: "assistant",
           content:
-            "The frontend could not fetch a research response. Make sure the FastAPI server is running and that NEXT_PUBLIC_API_URL points to it.\n\n" +
+            "The frontend could not fetch a research response. In production, make sure the Vercel server-side `API_URL` environment variable points to your deployed FastAPI backend.\n\n" +
             message,
           error: true,
         },
