@@ -1,53 +1,242 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0c10;
-  --foreground: #f5f7fb;
-  --surface: #17181d;
-  --font-display: "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
-  --font-plex-mono: "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  --bg: #06080a;
+  --bg-soft: #0a0d11;
+  --surface: #0d1115;
+  --surface-elev: #11161b;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --text: #e7ecf0;
+  --text-muted: rgba(231, 236, 240, 0.62);
+  --text-faint: rgba(231, 236, 240, 0.38);
+  --text-quiet: rgba(231, 236, 240, 0.22);
+
+  /* Cyan accent */
+  --accent: #67e8f9;
+  --accent-strong: #22d3ee;
+  --accent-deep: #0891b2;
+  --accent-soft: rgba(103, 232, 249, 0.14);
+  --accent-glow: rgba(34, 211, 238, 0.32);
+
+  --font-serif: var(--font-fraunces, "Fraunces", ui-serif, Georgia, Cambria, serif);
+  --font-sans: var(--font-inter-tight, "Inter Tight", ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-jetbrains-mono, "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-display);
-  --font-mono: var(--font-plex-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  background: var(--background);
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11", "cv05";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-display), sans-serif;
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle grain — adds depth on dark surfaces */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.035;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Distant cyan halo at top */
+body::after {
+  content: "";
+  position: fixed;
+  top: -260px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 880px;
+  height: 520px;
+  background: radial-gradient(
+    closest-side,
+    rgba(34, 211, 238, 0.16),
+    rgba(34, 211, 238, 0.04) 50%,
+    transparent 78%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 ::selection {
-  background: rgba(125, 211, 252, 0.24);
+  background: rgba(103, 232, 249, 0.28);
+  color: #ffffff;
 }
 
 a,
 button,
-summary {
+summary,
+input,
+textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
-textarea::-webkit-scrollbar,
-pre::-webkit-scrollbar {
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Scrollbars */
+*::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
-
-textarea::-webkit-scrollbar-thumb,
-pre::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(103, 232, 249, 0.35);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* ─── Type System ───────────────────────────────── */
+.font-serif {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+}
+.font-mono {
+  font-family: var(--font-mono);
+}
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ─── Animations ────────────────────────────────── */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.fade-in {
+  animation: fade-in 0.6s ease both;
+}
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+.spin-slow {
+  animation: spin-slow 1.4s linear infinite;
+}
+.caret::after {
+  content: "▍";
+  margin-left: 2px;
+  color: var(--accent);
+  animation: blink 1.05s steps(1) infinite;
+}
+
+/* Shimmer loading text */
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--text-muted) 0%,
+    var(--accent) 50%,
+    var(--text-muted) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2.4s linear infinite;
+}
+
+/* Editorial hairline divider */
+.hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--line-strong) 16%,
+    var(--line-strong) 84%,
+    transparent
+  );
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile — clamp halo */
+@media (max-width: 640px) {
+  body::after {
+    width: 540px;
+    height: 360px;
+    top: -180px;
+  }
 }

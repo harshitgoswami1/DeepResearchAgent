@@ -1,14 +1,15 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
 const starterPrompts = [
   "Tell me about Claude Mythos",
-  "Summarize the latest AI browser agents",
-  "Compare GPT-4.1, Claude, and Gemini for research",
+  "Latest AI browser agents",
+  "Compare GPT-4.1, Claude, and Gemini",
+  "State of open-source LLMs",
 ];
 
 type SourceRecord = {
@@ -42,18 +43,15 @@ type AssistantMessage = {
 type Message = UserMessage | AssistantMessage;
 
 function createId() {
-  return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
 }
 
 function formatFeedback(feedback: unknown) {
-  if (!feedback) {
-    return null;
-  }
-
-  if (typeof feedback === "string") {
-    return feedback;
-  }
-
+  if (!feedback) return null;
+  if (typeof feedback === "string") return feedback;
   return JSON.stringify(feedback, null, 2);
 }
 
@@ -65,47 +63,99 @@ function getSourceMeta(source: string | SourceRecord, index: number) {
       href: undefined,
     };
   }
-
   return {
     title: source.title?.trim() || `Source ${index + 1}`,
-    description: source.snippet?.trim() || source.url?.trim() || "No preview available.",
+    description:
+      source.snippet?.trim() || source.url?.trim() || "No preview available.",
     href: source.url?.trim(),
   };
 }
 
-function UserBubble({ content }: { content: string }) {
+function pad2(n: number) {
+  return n.toString().padStart(2, "0");
+}
+
+/* ─── User turn ─────────────────────────────────── */
+function UserTurn({ content, index }: { content: string; index: number }) {
   return (
-    <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-[28px] border border-white/10 bg-white/[0.08] px-5 py-3 text-[15px] text-white shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-sm sm:max-w-[65%]">
+    <div
+      className="rise group"
+      data-testid={`user-turn-${index}`}
+      style={{ animationDelay: "20ms" }}
+    >
+      <div className="flex items-baseline gap-3">
+        <span className="kicker">You · {pad2(index)}</span>
+        <div className="hairline flex-1 opacity-50" />
+      </div>
+      <p
+        className="font-serif mt-3 text-[22px] leading-[1.35] tracking-[-0.01em] text-white sm:text-[26px]"
+        style={{ fontStyle: "italic", fontWeight: 400 }}
+      >
         {content}
-      </div>
+      </p>
     </div>
   );
 }
 
-function LoadingCard({ topic }: { topic: string }) {
+/* ─── Loading state ─────────────────────────────── */
+function LoadingTurn({ topic, index }: { topic: string; index: number }) {
   return (
-    <div className="flex items-center gap-4 rounded-[28px] border border-white/8 bg-white/[0.04] px-5 py-4 text-sm text-white/82 shadow-[0_16px_50px_rgba(0,0,0,0.2)] backdrop-blur-sm">
-      <div className="relative flex h-10 w-10 items-center justify-center">
-        <div className="absolute inset-0 rounded-full border border-sky-400/50 border-t-transparent animate-spin" />
-        <div className="h-2.5 w-2.5 rounded-full bg-sky-300 shadow-[0_0_20px_rgba(125,211,252,0.8)]" />
+    <div className="rise" data-testid="loading-turn">
+      <div className="flex items-baseline gap-3">
+        <span className="kicker" style={{ color: "var(--accent)" }}>
+          Brief · {pad2(index)} · drafting
+        </span>
+        <div className="hairline flex-1 opacity-50" />
       </div>
-      <div>
-        <p className="font-medium text-white">Generating research brief</p>
-        <p className="mt-1 text-white/52">{topic}</p>
+
+      <div className="mt-4 flex items-center gap-4">
+        <div className="relative h-5 w-5 shrink-0">
+          <div
+            className="absolute inset-0 rounded-full border-[1.5px] border-transparent spin-slow"
+            style={{ borderTopColor: "var(--accent)" }}
+          />
+          <div
+            className="absolute inset-1.5 rounded-full pulse-dot"
+            style={{
+              background: "var(--accent)",
+              boxShadow: "0 0 14px var(--accent-glow)",
+            }}
+          />
+        </div>
+        <p className="shimmer-text font-mono text-[12px] tracking-[0.12em] uppercase">
+          Searching · scraping · synthesising — {topic}
+        </p>
+      </div>
+
+      <div className="mt-6 space-y-2.5">
+        {[92, 78, 88, 64].map((w, i) => (
+          <div
+            key={i}
+            className="h-3 rounded-sm fade-in"
+            style={{
+              width: `${w}%`,
+              background:
+                "linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+              animationDelay: `${i * 80}ms`,
+            }}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-function AssistantCard({
+/* ─── Assistant turn ────────────────────────────── */
+function AssistantTurn({
   content,
   payload,
   error = false,
+  index,
 }: {
   content: string;
   payload?: ResearchResponse;
   error?: boolean;
+  index: number;
 }) {
   const sources = payload?.search_results ?? [];
   const feedback = formatFeedback(payload?.feedback);
@@ -113,25 +163,36 @@ function AssistantCard({
     ? payload.scraped_content.length
     : 0;
 
+  const paragraphs = content.split(/\n{2,}/).filter(Boolean);
+
   return (
-    <article className="rounded-[32px] border border-white/8 bg-white/[0.04] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:p-7">
-      <div className="flex items-center gap-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06]">
-          <div className="h-3 w-3 rounded-full bg-sky-300 shadow-[0_0_18px_rgba(125,211,252,0.85)]" />
-        </div>
-        <div>
-          <p className="text-sm uppercase tracking-[0.22em] text-white/38">
-            {error ? "Request error" : "Research response"}
-          </p>
-          <h2 className="mt-1 text-lg font-medium text-white">
-            {payload?.topic || "Assistant"}
-          </h2>
-        </div>
+    <article
+      className="rise"
+      data-testid={`assistant-turn-${index}`}
+      style={{ animationDelay: "60ms" }}
+    >
+      <div className="flex items-baseline gap-3">
+        <span
+          className="kicker"
+          style={{ color: error ? "#fca5a5" : "var(--accent)" }}
+        >
+          {error ? "Error" : "Brief"} · {pad2(index)}
+          {payload?.topic ? ` · ${payload.topic}` : ""}
+        </span>
+        <div className="hairline flex-1 opacity-50" />
       </div>
 
-      <div className="mt-6 space-y-4 text-[15px] leading-7 text-white/76">
-        {content.split(/\n{2,}/).map((paragraph, index) => (
-          <p key={`${paragraph.slice(0, 12)}-${index}`} className="whitespace-pre-line">
+      {/* Body — editorial column */}
+      <div className="mt-5 space-y-5">
+        {paragraphs.map((paragraph, i) => (
+          <p
+            key={`${i}-${paragraph.slice(0, 16)}`}
+            className="text-[16px] leading-[1.78] sm:text-[17px] sm:leading-[1.82]"
+            style={{
+              color: error ? "#fda4a4" : "var(--text)",
+              fontWeight: 380,
+            }}
+          >
             {paragraph}
           </p>
         ))}
@@ -139,76 +200,94 @@ function AssistantCard({
 
       {!error && payload ? (
         <>
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-3xl border border-white/8 bg-black/20 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-white/35">
-                Sources
-              </p>
-              <p className="mt-2 text-2xl text-white">{sources.length}</p>
-            </div>
-            <div className="rounded-3xl border border-white/8 bg-black/20 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-white/35">
-                Scraped pages
-              </p>
-              <p className="mt-2 text-2xl text-white">{scrapedCount}</p>
-            </div>
-            <div className="rounded-3xl border border-white/8 bg-black/20 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-white/35">
-                Feedback
-              </p>
-              <p className="mt-2 text-base text-white/76">
-                {feedback ? "Available" : "None"}
-              </p>
-            </div>
+          {/* Stats — editorial split row */}
+          <div className="mt-9 grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--line)]">
+            <Stat label="Sources" value={String(sources.length)} />
+            <Stat label="Pages scraped" value={String(scrapedCount)} />
+            <Stat
+              label="Feedback"
+              value={feedback ? "Available" : "—"}
+              accent={Boolean(feedback)}
+            />
           </div>
 
+          {/* Sources — editorial numbered list */}
           {sources.length > 0 ? (
-            <details className="mt-5 rounded-3xl border border-white/8 bg-black/20 p-4">
-              <summary className="cursor-pointer list-none text-sm font-medium text-white">
-                View sources
+            <details
+              className="group mt-7 border-t border-[var(--line)] pt-5"
+              data-testid="sources-details"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] transition-colors group-hover:text-white">
+                  ↳ View all {sources.length} sources
+                </span>
+                <span
+                  className="font-mono text-[11px] text-[var(--text-faint)] transition-transform duration-300 group-open:rotate-180"
+                  aria-hidden
+                >
+                  ⌃
+                </span>
               </summary>
-              <div className="mt-4 space-y-3">
-                {sources.map((source, index) => {
-                  const item = getSourceMeta(source, index);
-
+              <ol className="mt-5 space-y-4">
+                {sources.map((source, i) => {
+                  const item = getSourceMeta(source, i);
                   return (
-                    <div
-                      key={`${item.title}-${index}`}
-                      className="rounded-2xl border border-white/8 bg-white/[0.02] p-4"
+                    <li
+                      key={`${item.title}-${i}`}
+                      className="grid grid-cols-[36px_1fr] gap-4"
                     >
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-white">
+                      <span className="font-mono text-[11px] tracking-[0.1em] text-[var(--text-quiet)] pt-[3px]">
+                        {pad2(i + 1)}
+                      </span>
+                      <div>
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                          <p className="text-[15px] font-medium text-white">
                             {item.title}
                           </p>
-                          <p className="mt-1 text-sm leading-6 text-white/56">
-                            {item.description}
-                          </p>
+                          {item.href ? (
+                            <a
+                              href={item.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              data-testid={`source-link-${i}`}
+                              className="group/link font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)] transition-colors hover:text-white"
+                            >
+                              Open
+                              <span className="ml-1 inline-block transition-transform group-hover/link:translate-x-0.5">
+                                →
+                              </span>
+                            </a>
+                          ) : null}
                         </div>
-                        {item.href ? (
-                          <a
-                            href={item.href}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sm text-sky-300 transition hover:text-sky-200"
-                          >
-                            Open
-                          </a>
-                        ) : null}
+                        <p className="mt-1 text-[14px] leading-[1.65] text-[var(--text-muted)]">
+                          {item.description}
+                        </p>
                       </div>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ol>
             </details>
           ) : null}
 
+          {/* Feedback */}
           {feedback ? (
-            <details className="mt-4 rounded-3xl border border-white/8 bg-black/20 p-4">
-              <summary className="cursor-pointer list-none text-sm font-medium text-white">
-                View backend feedback
+            <details
+              className="group mt-5 border-t border-[var(--line)] pt-5"
+              data-testid="feedback-details"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] transition-colors group-hover:text-white">
+                  ↳ Backend feedback
+                </span>
+                <span
+                  className="font-mono text-[11px] text-[var(--text-faint)] transition-transform duration-300 group-open:rotate-180"
+                  aria-hidden
+                >
+                  ⌃
+                </span>
               </summary>
-              <pre className="mt-4 overflow-x-auto whitespace-pre-wrap text-sm leading-6 text-white/56">
+              <pre className="mt-4 overflow-x-auto whitespace-pre-wrap rounded-md border border-[var(--line)] bg-[var(--surface)] p-4 font-mono text-[12px] leading-[1.7] text-[var(--text-muted)]">
                 {feedback}
               </pre>
             </details>
@@ -219,18 +298,55 @@ function AssistantCard({
   );
 }
 
+function Stat({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="bg-[var(--bg)] px-4 py-4">
+      <p className="kicker">{label}</p>
+      <p
+        className={`mt-2 font-serif text-[26px] leading-none tracking-[-0.02em] sm:text-[30px] ${
+          accent ? "" : "text-white"
+        }`}
+        style={accent ? { color: "var(--accent)" } : undefined}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────── */
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [topic, setTopic] = useState("");
   const [activeTopic, setActiveTopic] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const threadEndRef = useRef<HTMLDivElement>(null);
+
+  /* auto-grow textarea */
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+  }, [topic]);
+
+  /* scroll to bottom on new message */
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, isSubmitting]);
 
   async function submitResearch(nextTopic: string) {
     const trimmedTopic = nextTopic.trim();
-
-    if (!trimmedTopic || isSubmitting) {
-      return;
-    }
+    if (!trimmedTopic || isSubmitting) return;
 
     setMessages((current) => [
       ...current,
@@ -243,9 +359,7 @@ export default function Home() {
     try {
       const response = await fetch(`${API_BASE_URL}/research`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: trimmedTopic }),
       });
 
@@ -300,123 +414,297 @@ export default function Home() {
   }
 
   const hasMessages = messages.length > 0;
+  let turnIndex = 0; // global index for editorial numbering
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-transparent text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(79,70,229,0.12),_transparent_30%),radial-gradient(circle_at_20%_80%,_rgba(56,189,248,0.08),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.02),_transparent_24%)]" />
+    <main
+      className="relative z-10 min-h-screen text-[var(--text)]"
+      data-testid="home-main"
+    >
+      <div className="mx-auto flex min-h-screen w-full max-w-[1180px] flex-col px-5 pb-56 pt-7 sm:px-8 sm:pb-64 lg:px-12 lg:pt-10">
+        {/* ─── Header ─────────────────────────────── */}
+        <header
+          className="flex items-center justify-between"
+          data-testid="site-header"
+        >
+          <a
+            href="#"
+            className="group flex items-center gap-3"
+            data-testid="brand"
+          >
+            <span
+              className="relative inline-flex h-2 w-2 rounded-full"
+              style={{
+                background: "var(--accent)",
+                boxShadow: "0 0 14px var(--accent-glow)",
+              }}
+            >
+              <span
+                className="absolute inset-0 rounded-full pulse-dot"
+                style={{ background: "var(--accent)" }}
+              />
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.32em] text-white">
+              Deep
+              <span className="text-[var(--text-faint)]"> / </span>
+              Research
+            </span>
+          </a>
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-36 pt-6 sm:px-6 lg:px-10">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] shadow-[0_10px_35px_rgba(0,0,0,0.18)]">
-              <div className="h-5 w-5 rounded-full bg-[conic-gradient(from_220deg,_#f59e0b,_#fb7185,_#60a5fa,_#f59e0b)]" />
-            </div>
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-white/30">
-                Deep Research
-              </p>
-              <p className="text-sm text-white/55">web + api turborepo shell</p>
-            </div>
-          </div>
-          <div className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/60 shadow-[0_10px_30px_rgba(0,0,0,0.12)] sm:block">
-            Backend ready
+          <div
+            className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]"
+            data-testid="status-indicator"
+          >
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full pulse-dot"
+              style={{ background: "var(--accent)" }}
+            />
+            <span className="hidden sm:inline">Backend online</span>
+            <span className="sm:hidden">Online</span>
           </div>
         </header>
 
+        {/* ─── Body ───────────────────────────────── */}
         <section className="flex flex-1 flex-col">
-          {hasMessages ? (
-            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 pb-8 pt-12">
-              {messages.map((message) =>
-                message.role === "user" ? (
-                  <UserBubble key={message.id} content={message.content} />
-                ) : (
-                  <AssistantCard
-                    key={message.id}
-                    content={message.content}
-                    payload={message.payload}
-                    error={message.error}
-                  />
-                ),
-              )}
-              {isSubmitting ? <LoadingCard topic={activeTopic} /> : null}
+          {!hasMessages ? (
+            /* Empty / hero state */
+            <div
+              className="mx-auto flex w-full flex-1 flex-col justify-center pb-12 pt-16 sm:pt-24"
+              data-testid="empty-state"
+            >
+              <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
+                <div className="lg:col-span-9">
+                  <p
+                    className="kicker fade-in"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    ✦ Issue №01 — Editorial Research
+                  </p>
+
+                  <h1
+                    className="rise mt-6 font-serif text-[44px] leading-[1.02] tracking-[-0.035em] text-white sm:text-[64px] lg:text-[88px]"
+                    style={{ fontWeight: 350 }}
+                  >
+                    A quiet place to{" "}
+                    <span
+                      className="italic"
+                      style={{
+                        color: "var(--accent)",
+                        fontWeight: 300,
+                      }}
+                    >
+                      think
+                    </span>
+                    ,
+                    <br className="hidden sm:block" />
+                    delegated to a research engine.
+                  </h1>
+
+                  <p
+                    className="rise mt-7 max-w-[58ch] text-[16px] leading-[1.75] text-[var(--text-muted)] sm:text-[18px] sm:leading-[1.78]"
+                    style={{ animationDelay: "120ms" }}
+                  >
+                    Type a topic. The pipeline searches the open web, scrapes
+                    the most relevant pages, and returns a written brief —
+                    citations included. No accounts. No ceremony.
+                  </p>
+
+                  <div
+                    className="rise mt-10 flex flex-wrap items-center gap-2"
+                    style={{ animationDelay: "200ms" }}
+                    data-testid="starter-prompts"
+                  >
+                    <span className="kicker mr-1">Try</span>
+                    {starterPrompts.map((prompt, i) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        data-testid={`starter-prompt-${i}`}
+                        onClick={() => {
+                          setTopic(prompt);
+                          composerRef.current?.focus();
+                        }}
+                        className="group/chip relative rounded-full border border-[var(--line)] bg-transparent px-4 py-1.5 text-[13px] text-[var(--text-muted)] transition-all duration-200 hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-white"
+                      >
+                        {prompt}
+                        <span className="ml-2 inline-block opacity-0 transition-all duration-200 group-hover/chip:translate-x-0.5 group-hover/chip:opacity-100">
+                          →
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* meta column */}
+                <aside
+                  className="rise lg:col-span-3 lg:border-l lg:border-[var(--line)] lg:pl-7"
+                  style={{ animationDelay: "260ms" }}
+                  data-testid="hero-meta"
+                >
+                  <dl className="space-y-7">
+                    <div>
+                      <dt className="kicker">Pipeline</dt>
+                      <dd className="mt-2 font-serif text-[20px] italic text-white">
+                        search → scrape → synthesise
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="kicker">Output</dt>
+                      <dd className="mt-2 text-[14px] leading-[1.7] text-[var(--text-muted)]">
+                        A written brief with verifiable sources.
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="kicker">Time</dt>
+                      <dd className="mt-2 text-[14px] text-[var(--text-muted)]">
+                        ≈ 30–60 seconds
+                      </dd>
+                    </div>
+                  </dl>
+                </aside>
+              </div>
             </div>
           ) : (
-            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center pb-10 pt-12">
-              <div className="max-w-2xl">
-                <p className="text-sm uppercase tracking-[0.28em] text-white/32">
-                  Minimal research chat
-                </p>
-                <h1 className="mt-5 text-4xl font-medium tracking-[-0.04em] text-white sm:text-6xl">
-                  Ask the backend for a deep research brief.
-                </h1>
-                <p className="mt-5 max-w-xl text-base leading-7 text-white/56 sm:text-lg">
-                  The API is already complete. This frontend keeps the surface
-                  tight: enter a topic, trigger `/research`, and read the report
-                  with sources in a focused response card.
-                </p>
+            /* Conversation thread */
+            <div
+              className="mx-auto w-full max-w-[760px] flex-1 pt-12 sm:pt-16"
+              data-testid="thread"
+            >
+              <div className="space-y-14">
+                {messages.map((message) => {
+                  turnIndex += 1;
+                  return message.role === "user" ? (
+                    <UserTurn
+                      key={message.id}
+                      content={message.content}
+                      index={turnIndex}
+                    />
+                  ) : (
+                    <AssistantTurn
+                      key={message.id}
+                      content={message.content}
+                      payload={message.payload}
+                      error={message.error}
+                      index={turnIndex}
+                    />
+                  );
+                })}
+                {isSubmitting ? (
+                  <LoadingTurn
+                    topic={activeTopic}
+                    index={turnIndex + 1}
+                  />
+                ) : null}
               </div>
-
-              <div className="mt-10 flex flex-wrap gap-3">
-                {starterPrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => setTopic(prompt)}
-                    className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-white/68 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+              <div ref={threadEndRef} />
             </div>
           )}
         </section>
       </div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(10,11,15,0)_0%,rgba(10,11,15,0.72)_32%,rgba(10,11,15,0.98)_100%)] px-4 pb-6 pt-16 sm:px-6">
-        <div className="pointer-events-auto mx-auto w-full max-w-4xl">
+      {/* ─── Composer ─────────────────────────────── */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-5 pt-20 sm:px-6 sm:pb-7"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(6,8,10,0) 0%, rgba(6,8,10,0.72) 28%, rgba(6,8,10,0.96) 70%, rgba(6,8,10,1) 100%)",
+        }}
+        data-testid="composer-wrapper"
+      >
+        <div className="pointer-events-auto mx-auto w-full max-w-[760px]">
           <form
             onSubmit={handleSubmit}
-            className="rounded-[34px] border border-white/10 bg-[#17181d]/90 p-4 shadow-[0_24px_100px_rgba(0,0,0,0.38)] backdrop-blur-xl sm:p-5"
+            data-testid="composer-form"
+            className="group/form relative rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)]/90 px-4 pb-3 pt-3.5 shadow-[0_30px_120px_-30px_rgba(0,0,0,0.85)] backdrop-blur-xl transition-colors focus-within:border-[var(--accent-deep)]"
           >
-            <label htmlFor="topic" className="sr-only">
-              Research topic
-            </label>
-            <textarea
-              id="topic"
-              value={topic}
-              onChange={(event) => setTopic(event.target.value)}
-              onKeyDown={handleComposerKeyDown}
-              placeholder="What do you want to research?"
-              className="min-h-[88px] w-full resize-none border-none bg-transparent px-2 py-1 text-lg leading-8 text-white outline-none placeholder:text-white/40"
+            {/* subtle cyan focus glow */}
+            <div
+              className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-focus-within/form:opacity-100"
+              style={{
+                boxShadow: "0 0 0 1px var(--accent-soft), 0 0 60px -10px var(--accent-glow) inset",
+              }}
+              aria-hidden
             />
 
-            <div className="mt-4 flex flex-col gap-3 border-t border-white/8 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span
+                className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--accent)]"
+                aria-hidden
+              >
+                ›
+              </span>
+              <label htmlFor="topic" className="sr-only">
+                Research topic
+              </label>
+              <textarea
+                ref={composerRef}
+                id="topic"
+                data-testid="composer-input"
+                value={topic}
+                onChange={(event) => setTopic(event.target.value)}
+                onKeyDown={handleComposerKeyDown}
+                rows={1}
+                placeholder="What do you want to research?"
+                className="min-h-[28px] w-full resize-none border-none bg-transparent py-1 text-[16px] leading-[1.6] text-white outline-none placeholder:text-[var(--text-faint)] sm:text-[17px]"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-sky-300/18 bg-sky-300/10 px-3 py-1 text-sm text-sky-200">
-                  Deep Research
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-soft)] px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em]"
+                  style={{
+                    color: "var(--accent)",
+                    background: "var(--accent-soft)",
+                  }}
+                >
+                  <span
+                    className="inline-block h-1 w-1 rounded-full"
+                    style={{ background: "var(--accent)" }}
+                  />
+                  Deep mode
                 </span>
-                <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-sm text-white/52">
-                  Sources included
+                <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--text-faint)] sm:inline">
+                  Citations included
                 </span>
               </div>
 
-              <div className="flex items-center justify-between gap-3">
-                <span className="hidden text-sm text-white/38 sm:inline">
-                  Enter to send
+              <div className="flex items-center gap-3">
+                <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.2em] text-[var(--text-faint)] sm:inline">
+                  ↵ Enter to send
                 </span>
                 <button
                   type="submit"
+                  data-testid="composer-submit"
                   disabled={isSubmitting || !topic.trim()}
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-white px-5 text-sm font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/14 disabled:text-white/35"
+                  className="group/btn relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-5 font-mono text-[11px] uppercase tracking-[0.18em] transition-all duration-200 disabled:cursor-not-allowed"
+                  style={{
+                    background: isSubmitting || !topic.trim() ? "rgba(255,255,255,0.04)" : "var(--accent)",
+                    color: isSubmitting || !topic.trim() ? "var(--text-faint)" : "#031416",
+                    boxShadow: isSubmitting || !topic.trim() ? "none" : "0 8px 30px -8px var(--accent-glow)",
+                  }}
                 >
-                  {isSubmitting ? "Researching..." : "Research"}
+                  <span>{isSubmitting ? "Researching" : "Research"}</span>
+                  <span
+                    className={`inline-block transition-transform duration-300 ${
+                      isSubmitting ? "" : "group-hover/btn:translate-x-1"
+                    }`}
+                    aria-hidden
+                  >
+                    {isSubmitting ? (
+                      <span className="caret" aria-hidden />
+                    ) : (
+                      "→"
+                    )}
+                  </span>
                 </button>
               </div>
             </div>
           </form>
-          <p className="mt-4 text-center text-sm text-white/34">
-            Research outputs may contain mistakes. Verify important details.
+
+          <p className="mt-3.5 text-center font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--text-quiet)]">
+            Outputs may contain mistakes — verify important details.
           </p>
         </div>
       </div>
