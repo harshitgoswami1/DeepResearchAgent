@@ -417,297 +417,286 @@ export default function Home() {
   let turnIndex = 0; // global index for editorial numbering
 
   return (
-    <main
-      className="relative z-10 min-h-screen text-[var(--text)]"
-      data-testid="home-main"
-    >
-      <div className="mx-auto flex min-h-screen w-full max-w-[1180px] flex-col px-5 pb-56 pt-7 sm:px-8 sm:pb-64 lg:px-12 lg:pt-10">
-        {/* ─── Header ─────────────────────────────── */}
-        <header
-          className="flex items-center justify-between"
-          data-testid="site-header"
-        >
-          <a
-            href="#"
-            className="group flex items-center gap-3"
-            data-testid="brand"
+  <main
+        className="relative z-10 min-h-screen text-[var(--text)]"
+        data-testid="home-main"
+      >
+        <div className="mx-auto flex min-h-screen w-full max-w-[1180px] flex-col px-5 pb-56 pt-5  sm:px-8 sm:pb-64 lg:px-12 ">
+          <header
+            className="flex items-center justify-between"
+            data-testid="site-header"
           >
-            <span
-              className="relative inline-flex h-2 w-2 rounded-full"
-              style={{
-                background: "var(--accent)",
-                boxShadow: "0 0 14px var(--accent-glow)",
-              }}
+            <a
+              href="#"
+              className="group flex items-center "
+              data-testid="brand"
+            >
+
+              <span className="font-mono text-[11px] uppercase tracking-[0.32em] text-white">
+                Deep
+
+                Research
+              </span>
+            </a>
+
+            <div
+              className="flex items-center font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]"
+              data-testid="status-indicator"
             >
               <span
-                className="absolute inset-0 rounded-full pulse-dot"
+                className="inline-block h-1.5 w-1.5 rounded-full pulse-dot"
                 style={{ background: "var(--accent)" }}
               />
-            </span>
-            <span className="font-mono text-[11px] uppercase tracking-[0.32em] text-white">
-              Deep
-              <span className="text-[var(--text-faint)]"> / </span>
-              Research
-            </span>
-          </a>
+              <span className="hidden sm:inline">Backend online</span>
+              <span className="sm:hidden">Online</span>
+            </div>
+          </header>
 
-          <div
-            className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--text-muted)]"
-            data-testid="status-indicator"
-          >
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full pulse-dot"
-              style={{ background: "var(--accent)" }}
-            />
-            <span className="hidden sm:inline">Backend online</span>
-            <span className="sm:hidden">Online</span>
-          </div>
-        </header>
-
-        {/* ─── Body ───────────────────────────────── */}
-        <section className="flex flex-1 flex-col">
-          {!hasMessages ? (
-            /* Empty / hero state */
-            <div
-              className="mx-auto flex w-full flex-1 flex-col justify-center pb-12 pt-16 sm:pt-24"
-              data-testid="empty-state"
-            >
-              <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
-                <div className="lg:col-span-9">
-                  <p
-                    className="kicker fade-in"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    ✦ Issue №01 — Editorial Research
-                  </p>
-
-                  <h1
-                    className="rise mt-6 font-serif text-[44px] leading-[1.02] tracking-[-0.035em] text-white sm:text-[64px] lg:text-[88px]"
-                    style={{ fontWeight: 350 }}
-                  >
-                    A quiet place to{" "}
-                    <span
-                      className="italic"
-                      style={{
-                        color: "var(--accent)",
-                        fontWeight: 300,
-                      }}
+          {/* ─── Body ───────────────────────────────── */}
+          <section className="flex flex-1 flex-col">
+            {!hasMessages ? (
+              /* Empty / hero state */
+              <div
+                className="mx-auto flex w-full flex-1 flex-col justify-center "
+                data-testid="empty-state"
+                style={{ transform: "scale(0.75)" }}
+              >
+                <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
+                  <div className="lg:col-span-9">
+                    <p
+                      className="kicker fade-in"
+                      style={{ color: "var(--accent)" }}
                     >
-                      think
-                    </span>
-                    ,
-                    <br className="hidden sm:block" />
-                    delegated to a research engine.
-                  </h1>
+                      ✦ Issue №01 — Editorial Research
+                    </p>
 
-                  <p
-                    className="rise mt-7 max-w-[58ch] text-[16px] leading-[1.75] text-[var(--text-muted)] sm:text-[18px] sm:leading-[1.78]"
-                    style={{ animationDelay: "120ms" }}
-                  >
-                    Type a topic. The pipeline searches the open web, scrapes
-                    the most relevant pages, and returns a written brief —
-                    citations included. No accounts. No ceremony.
-                  </p>
-
-                  <div
-                    className="rise mt-10 flex flex-wrap items-center gap-2"
-                    style={{ animationDelay: "200ms" }}
-                    data-testid="starter-prompts"
-                  >
-                    <span className="kicker mr-1">Try</span>
-                    {starterPrompts.map((prompt, i) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        data-testid={`starter-prompt-${i}`}
-                        onClick={() => {
-                          setTopic(prompt);
-                          composerRef.current?.focus();
+                    <h1
+                      className="rise mt-6 font-serif text-[44px] leading-[1.02] tracking-[-0.035em] text-white sm:text-[64px] lg:text-[88px]"
+                      style={{ fontWeight: 350 }}
+                    >
+                      A quiet place to{" "}
+                      <span
+                        className="italic"
+                        style={{
+                          color: "var(--accent)",
+                          fontWeight: 300,
                         }}
-                        className="group/chip relative rounded-full border border-[var(--line)] bg-transparent px-4 py-1.5 text-[13px] text-[var(--text-muted)] transition-all duration-200 hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-white"
                       >
-                        {prompt}
-                        <span className="ml-2 inline-block opacity-0 transition-all duration-200 group-hover/chip:translate-x-0.5 group-hover/chip:opacity-100">
-                          →
-                        </span>
-                      </button>
-                    ))}
+                        think
+                      </span>
+                      ,
+                      <br className="hidden sm:block" />
+                      delegated to a research engine.
+                    </h1>
+
+                    <p
+                      className="rise mt-7 max-w-[58ch] text-[16px] leading-[1.75] text-[var(--text-muted)] sm:text-[18px] sm:leading-[1.78]"
+                      style={{ animationDelay: "120ms" }}
+                    >
+                      Type a topic. The pipeline searches the open web, scrapes
+                      the most relevant pages, and returns a written brief —
+                      citations included. No accounts. No ceremony.
+                    </p>
+
+                    <div
+                      className="rise mt-10 flex flex-wrap items-center gap-2"
+                      style={{ animationDelay: "200ms" }}
+                      data-testid="starter-prompts"
+                    >
+                      <span className="kicker mr-1">Try</span>
+                      {starterPrompts.map((prompt, i) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          data-testid={`starter-prompt-${i}`}
+                          onClick={() => {
+                            setTopic(prompt);
+                            composerRef.current?.focus();
+                          }}
+                          className="group/chip relative rounded-full border border-[var(--line)] bg-transparent px-4 py-1.5 text-[13px] text-[var(--text-muted)] transition-all duration-200 hover:border-[var(--accent)] hover:bg-[var(--accent-soft)] hover:text-white"
+                        >
+                          {prompt}
+                          <span className="ml-2 inline-block opacity-0 transition-all duration-200 group-hover/chip:translate-x-0.5 group-hover/chip:opacity-100">
+                            →
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* meta column */}
+                  <aside
+                    className="rise lg:col-span-3 lg:border-l lg:border-[var(--line)] lg:pl-7"
+                    style={{ animationDelay: "260ms" }}
+                    data-testid="hero-meta"
+                  >
+                    <dl className="space-y-7">
+                      <div>
+                        <dt className="kicker">Pipeline</dt>
+                        <dd className="mt-2 font-serif text-[20px] italic text-white">
+                          search → scrape → synthesise
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="kicker">Output</dt>
+                        <dd className="mt-2 text-[14px] leading-[1.7] text-[var(--text-muted)]">
+                          A written brief with verifiable sources.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="kicker">Time</dt>
+                        <dd className="mt-2 text-[14px] text-[var(--text-muted)]">
+                          ≈ 30–60 seconds
+                        </dd>
+                      </div>
+                    </dl>
+                  </aside>
+                </div>
+              </div>
+            ) : (
+              /* Conversation thread */
+              <div
+                className="mx-auto w-full max-w-[760px] flex-1 pt-12 sm:pt-16"
+                data-testid="thread"
+              >
+                <div className="space-y-14">
+                  {messages.map((message) => {
+                    turnIndex += 1;
+                    return message.role === "user" ? (
+                      <UserTurn
+                        key={message.id}
+                        content={message.content}
+                        index={turnIndex}
+                      />
+                    ) : (
+                      <AssistantTurn
+                        key={message.id}
+                        content={message.content}
+                        payload={message.payload}
+                        error={message.error}
+                        index={turnIndex}
+                      />
+                    );
+                  })}
+                  {isSubmitting ? (
+                    <LoadingTurn
+                      topic={activeTopic}
+                      index={turnIndex + 1}
+                    />
+                  ) : null}
+                </div>
+                <div ref={threadEndRef} />
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* ─── Composer ─────────────────────────────── */}
+        <div
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-5 pt-20 sm:px-6 sm:pb-7"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(6,8,10,0) 0%, rgba(6,8,10,0.72) 28%, rgba(6,8,10,0.96) 70%, rgba(6,8,10,1) 100%)",
+          }}
+          data-testid="composer-wrapper"
+        >
+          <div className="pointer-events-auto mx-auto w-full max-w-[760px]">
+            <form
+              onSubmit={handleSubmit}
+              data-testid="composer-form"
+              className="group/form relative rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)]/90 px-4 pb-3 pt-3.5 shadow-[0_30px_120px_-30px_rgba(0,0,0,0.85)] backdrop-blur-xl transition-colors focus-within:border-[var(--accent-deep)]"
+            >
+              {/* subtle cyan focus glow */}
+              <div
+                className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-focus-within/form:opacity-100"
+                style={{
+                  boxShadow: "0 0 0 1px var(--accent-soft), 0 0 60px -10px var(--accent-glow) inset",
+                }}
+                aria-hidden
+              />
+
+              <div className="flex items-start gap-3">
+                <span
+                  className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--accent)]"
+                  aria-hidden
+                >
+                  ›
+                </span>
+                <label htmlFor="topic" className="sr-only">
+                  Research topic
+                </label>
+                <textarea
+                  ref={composerRef}
+                  id="topic"
+                  data-testid="composer-input"
+                  value={topic}
+                  onChange={(event) => setTopic(event.target.value)}
+                  onKeyDown={handleComposerKeyDown}
+                  rows={1}
+                  placeholder="What do you want to research?"
+                  className="min-h-[28px] w-full resize-none border-none bg-transparent py-1 text-[16px] leading-[1.6] text-white outline-none placeholder:text-[var(--text-faint)] sm:text-[17px]"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-soft)] px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em]"
+                    style={{
+                      color: "var(--accent)",
+                      background: "var(--accent-soft)",
+                    }}
+                  >
+                    <span
+                      className="inline-block h-1 w-1 rounded-full"
+                      style={{ background: "var(--accent)" }}
+                    />
+                    Deep mode
+                  </span>
+                  <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--text-faint)] sm:inline">
+                    Citations included
+                  </span>
                 </div>
 
-                {/* meta column */}
-                <aside
-                  className="rise lg:col-span-3 lg:border-l lg:border-[var(--line)] lg:pl-7"
-                  style={{ animationDelay: "260ms" }}
-                  data-testid="hero-meta"
-                >
-                  <dl className="space-y-7">
-                    <div>
-                      <dt className="kicker">Pipeline</dt>
-                      <dd className="mt-2 font-serif text-[20px] italic text-white">
-                        search → scrape → synthesise
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="kicker">Output</dt>
-                      <dd className="mt-2 text-[14px] leading-[1.7] text-[var(--text-muted)]">
-                        A written brief with verifiable sources.
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="kicker">Time</dt>
-                      <dd className="mt-2 text-[14px] text-[var(--text-muted)]">
-                        ≈ 30–60 seconds
-                      </dd>
-                    </div>
-                  </dl>
-                </aside>
-              </div>
-            </div>
-          ) : (
-            /* Conversation thread */
-            <div
-              className="mx-auto w-full max-w-[760px] flex-1 pt-12 sm:pt-16"
-              data-testid="thread"
-            >
-              <div className="space-y-14">
-                {messages.map((message) => {
-                  turnIndex += 1;
-                  return message.role === "user" ? (
-                    <UserTurn
-                      key={message.id}
-                      content={message.content}
-                      index={turnIndex}
-                    />
-                  ) : (
-                    <AssistantTurn
-                      key={message.id}
-                      content={message.content}
-                      payload={message.payload}
-                      error={message.error}
-                      index={turnIndex}
-                    />
-                  );
-                })}
-                {isSubmitting ? (
-                  <LoadingTurn
-                    topic={activeTopic}
-                    index={turnIndex + 1}
-                  />
-                ) : null}
-              </div>
-              <div ref={threadEndRef} />
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* ─── Composer ─────────────────────────────── */}
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-5 pt-20 sm:px-6 sm:pb-7"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(6,8,10,0) 0%, rgba(6,8,10,0.72) 28%, rgba(6,8,10,0.96) 70%, rgba(6,8,10,1) 100%)",
-        }}
-        data-testid="composer-wrapper"
-      >
-        <div className="pointer-events-auto mx-auto w-full max-w-[760px]">
-          <form
-            onSubmit={handleSubmit}
-            data-testid="composer-form"
-            className="group/form relative rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)]/90 px-4 pb-3 pt-3.5 shadow-[0_30px_120px_-30px_rgba(0,0,0,0.85)] backdrop-blur-xl transition-colors focus-within:border-[var(--accent-deep)]"
-          >
-            {/* subtle cyan focus glow */}
-            <div
-              className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-focus-within/form:opacity-100"
-              style={{
-                boxShadow: "0 0 0 1px var(--accent-soft), 0 0 60px -10px var(--accent-glow) inset",
-              }}
-              aria-hidden
-            />
-
-            <div className="flex items-start gap-3">
-              <span
-                className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--accent)]"
-                aria-hidden
-              >
-                ›
-              </span>
-              <label htmlFor="topic" className="sr-only">
-                Research topic
-              </label>
-              <textarea
-                ref={composerRef}
-                id="topic"
-                data-testid="composer-input"
-                value={topic}
-                onChange={(event) => setTopic(event.target.value)}
-                onKeyDown={handleComposerKeyDown}
-                rows={1}
-                placeholder="What do you want to research?"
-                className="min-h-[28px] w-full resize-none border-none bg-transparent py-1 text-[16px] leading-[1.6] text-white outline-none placeholder:text-[var(--text-faint)] sm:text-[17px]"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-soft)] px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em]"
-                  style={{
-                    color: "var(--accent)",
-                    background: "var(--accent-soft)",
-                  }}
-                >
-                  <span
-                    className="inline-block h-1 w-1 rounded-full"
-                    style={{ background: "var(--accent)" }}
-                  />
-                  Deep mode
-                </span>
-                <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--text-faint)] sm:inline">
-                  Citations included
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.2em] text-[var(--text-faint)] sm:inline">
-                  ↵ Enter to send
-                </span>
-                <button
-                  type="submit"
-                  data-testid="composer-submit"
-                  disabled={isSubmitting || !topic.trim()}
-                  className="group/btn relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-5 font-mono text-[11px] uppercase tracking-[0.18em] transition-all duration-200 disabled:cursor-not-allowed"
-                  style={{
-                    background: isSubmitting || !topic.trim() ? "rgba(255,255,255,0.04)" : "var(--accent)",
-                    color: isSubmitting || !topic.trim() ? "var(--text-faint)" : "#031416",
-                    boxShadow: isSubmitting || !topic.trim() ? "none" : "0 8px 30px -8px var(--accent-glow)",
-                  }}
-                >
-                  <span>{isSubmitting ? "Researching" : "Research"}</span>
-                  <span
-                    className={`inline-block transition-transform duration-300 ${
-                      isSubmitting ? "" : "group-hover/btn:translate-x-1"
-                    }`}
-                    aria-hidden
-                  >
-                    {isSubmitting ? (
-                      <span className="caret" aria-hidden />
-                    ) : (
-                      "→"
-                    )}
+                <div className="flex items-center gap-3">
+                  <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.2em] text-[var(--text-faint)] sm:inline">
+                    ↵ Enter to send
                   </span>
-                </button>
+                  <button
+                    type="submit"
+                    data-testid="composer-submit"
+                    disabled={isSubmitting || !topic.trim()}
+                    className="group/btn relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-full px-5 font-mono text-[11px] uppercase tracking-[0.18em] transition-all duration-200 disabled:cursor-not-allowed"
+                    style={{
+                      background: isSubmitting || !topic.trim() ? "rgba(255,255,255,0.04)" : "var(--accent)",
+                      color: isSubmitting || !topic.trim() ? "var(--text-faint)" : "#031416",
+                      boxShadow: isSubmitting || !topic.trim() ? "none" : "0 8px 30px -8px var(--accent-glow)",
+                    }}
+                  >
+                    <span>{isSubmitting ? "Researching" : "Research"}</span>
+                    <span
+                      className={`inline-block transition-transform duration-300 ${
+                        isSubmitting ? "" : "group-hover/btn:translate-x-1"
+                      }`}
+                      aria-hidden
+                    >
+                      {isSubmitting ? (
+                        <span className="caret" aria-hidden />
+                      ) : (
+                        "→"
+                      )}
+                    </span>
+                  </button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
 
-          <p className="mt-3.5 text-center font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--text-quiet)]">
-            Outputs may contain mistakes — verify important details.
-          </p>
+            <p className="mt-3.5 text-center font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--text-quiet)]">
+              Outputs may contain mistakes — verify important details.
+            </p>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
   );
 }
