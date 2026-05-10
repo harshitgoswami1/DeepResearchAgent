@@ -1,0 +1,9 @@
+{
+  "name": "api",
+  "private": true,
+  "scripts": {
+    "dev": "uvicorn app.main:app --reload",
+    "start": "uvicorn app.main:app",
+    "build": "echo 'No build step for FastAPI'"
+  }
+}
