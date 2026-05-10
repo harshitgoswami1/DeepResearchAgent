@@ -12,12 +12,15 @@
   --text-faint: rgba(231, 236, 240, 0.38);
   --text-quiet: rgba(231, 236, 240, 0.22);
 
-  /* Cyan accent */
-  --accent: #67e8f9;
-  --accent-strong: #22d3ee;
-  --accent-deep: #0891b2;
-  --accent-soft: rgba(103, 232, 249, 0.14);
-  --accent-glow: rgba(34, 211, 238, 0.32);
+/* Orange accent */
+--accent: #fb923c;
+--accent-strong: #f97316;
+--accent-deep: #c2410c;
+--accent-soft: rgba(249, 115, 22, 0.14);
+--accent-glow: rgba(249, 115, 22, 0.32);
+
+
+
 
   --font-serif: var(--font-fraunces, "Fraunces", ui-serif, Georgia, Cambria, serif);
   --font-sans: var(--font-inter-tight, "Inter Tight", ui-sans-serif, system-ui, sans-serif);
@@ -220,6 +223,177 @@ summary:focus-visible {
     var(--line-strong) 84%,
     transparent
   );
+}
+
+.markdown-report {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 380;
+  line-height: 1.78;
+}
+
+.markdown-report > * + * {
+  margin-top: 1.15em;
+}
+
+.markdown-report-error {
+  color: #fda4a4;
+}
+
+.markdown-report :where(h1, h2, h3, h4) {
+  color: #ffffff;
+  font-family: var(--font-serif);
+  font-weight: 100;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  text-wrap: balance;
+  
+  /* Option 1: Reduce opacity to make them appear lighter */
+  opacity: 0.9;
+  
+  /* OR Option 2: Use a lighter color */
+  color: rgba(255, 255, 255, 0.85);
+  
+  /* OR Option 3: Add a subtle text stroke (can make text appear thinner) */
+  -webkit-text-stroke: 0.2px rgba(0, 0, 0, 0.3);
+}
+
+.markdown-report h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.markdown-report h2 {
+  font-size: clamp(1.6rem, 3vw, 2.35rem);
+}
+
+.markdown-report h3,
+.markdown-report h4 {
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+}
+
+.markdown-report p,
+.markdown-report li {
+  color: inherit;
+}
+
+.markdown-report strong {
+  color: #ffffff;
+  font-weight: 640;
+}
+
+.markdown-report em {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.markdown-report a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(103, 232, 249, 0.34);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: color 160ms ease, text-decoration-color 160ms ease;
+}
+
+.markdown-report a:hover {
+  color: #ffffff;
+  text-decoration-color: var(--accent);
+}
+
+.markdown-report ul,
+.markdown-report ol {
+  padding-left: 1.4rem;
+}
+
+.markdown-report ul {
+  list-style: disc;
+}
+
+.markdown-report ol {
+  list-style: decimal;
+}
+
+.markdown-report li + li {
+  margin-top: 0.45rem;
+}
+
+.markdown-report li::marker {
+  color: var(--accent);
+}
+
+.markdown-report blockquote {
+  border-left: 1px solid rgba(103, 232, 249, 0.34);
+  color: rgba(231, 236, 240, 0.8);
+  margin: 1.6rem 0;
+  padding-left: 1rem;
+}
+
+.markdown-report hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.8rem 0;
+}
+
+.markdown-report code {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 0.16rem 0.38rem;
+}
+
+.markdown-report pre {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+    var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  margin: 1.4rem 0;
+  overflow-x: auto;
+  padding: 1rem 1.1rem;
+}
+
+.markdown-report pre code {
+  background: transparent;
+  border: 0;
+  display: block;
+  font-size: 0.88rem;
+  line-height: 1.75;
+  padding: 0;
+}
+
+.markdown-report table {
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  width: 100%;
+}
+
+.markdown-report th,
+.markdown-report td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-report th {
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .markdown-report {
+    font-size: 15px;
+    line-height: 1.72;
+  }
+
+  .markdown-report pre {
+    border-radius: 0.85rem;
+    padding: 0.9rem;
+  }
 }
 
 /* Reduce motion */

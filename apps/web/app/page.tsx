@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { MarkdownReport } from "./components/markdown-report";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
@@ -18,12 +19,20 @@ type SourceRecord = {
   snippet?: string;
 };
 
+type FeedbackRecord = {
+  score?: number | null;
+  out_of?: number | null;
+  strengths?: string[];
+  areas_to_improve?: string[];
+  verdict?: string;
+};
+
 type ResearchResponse = {
   topic: string;
   search_results?: Array<string | SourceRecord>;
   scraped_content?: unknown[];
   report: string;
-  feedback?: unknown;
+  feedback?: FeedbackRecord | string | null;
 };
 
 type UserMessage = {
@@ -53,6 +62,48 @@ function formatFeedback(feedback: unknown) {
   if (!feedback) return null;
   if (typeof feedback === "string") return feedback;
   return JSON.stringify(feedback, null, 2);
+}
+
+function normalizeFeedback(feedback: ResearchResponse["feedback"]) {
+  if (!feedback) return null;
+
+  if (typeof feedback === "string") {
+    const scoreMatch = feedback.match(/Score:\s*(\d+)(?:\s*\/\s*(\d+))?/i);
+    const verdictMatch = feedback.match(/One line verdict:\s*([\s\S]+)/i);
+
+    const parseList = (section: string, nextSections: string[]) => {
+      const pattern = new RegExp(
+        `${section}:\\s*([\\s\\S]*?)(?=\\n(?:${nextSections.join("|")}):|$)`,
+        "i",
+      );
+      const match = feedback.match(pattern);
+      if (!match) return [];
+
+      return match[1]
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("-"))
+        .map((line) => line.replace(/^-+\s*/, "").trim());
+    };
+
+    return {
+      score: scoreMatch ? Number(scoreMatch[1]) : null,
+      out_of: scoreMatch?.[2] ? Number(scoreMatch[2]) : 10,
+      strengths: parseList("Strengths", ["Areas to Improve", "One line verdict"]),
+      areas_to_improve: parseList("Areas to Improve", ["One line verdict"]),
+      verdict: verdictMatch?.[1]?.trim() || feedback.trim(),
+    };
+  }
+
+  return {
+    score: feedback.score ?? null,
+    out_of: feedback.out_of ?? 10,
+    strengths: Array.isArray(feedback.strengths) ? feedback.strengths : [],
+    areas_to_improve: Array.isArray(feedback.areas_to_improve)
+      ? feedback.areas_to_improve
+      : [],
+    verdict: feedback.verdict?.trim() || "",
+  };
 }
 
 function getSourceMeta(source: string | SourceRecord, index: number) {
@@ -89,7 +140,7 @@ function UserTurn({ content, index }: { content: string; index: number }) {
       </div>
       <p
         className="font-serif mt-3 text-[22px] leading-[1.35] tracking-[-0.01em] text-white sm:text-[26px]"
-        style={{ fontStyle: "italic", fontWeight: 400 }}
+        // style={{ fontStyle: "italic", fontWeight: 400 }}
       >
         {content}
       </p>
@@ -158,12 +209,10 @@ function AssistantTurn({
   index: number;
 }) {
   const sources = payload?.search_results ?? [];
-  const feedback = formatFeedback(payload?.feedback);
+  const feedback = normalizeFeedback(payload?.feedback);
   const scrapedCount = Array.isArray(payload?.scraped_content)
     ? payload.scraped_content.length
     : 0;
-
-  const paragraphs = content.split(/\n{2,}/).filter(Boolean);
 
   return (
     <article
@@ -183,19 +232,8 @@ function AssistantTurn({
       </div>
 
       {/* Body — editorial column */}
-      <div className="mt-5 space-y-5">
-        {paragraphs.map((paragraph, i) => (
-          <p
-            key={`${i}-${paragraph.slice(0, 16)}`}
-            className="text-[16px] leading-[1.78] sm:text-[17px] sm:leading-[1.82]"
-            style={{
-              color: error ? "#fda4a4" : "var(--text)",
-              fontWeight: 380,
-            }}
-          >
-            {paragraph}
-          </p>
-        ))}
+      <div className="mt-5">
+        <MarkdownReport content={content} error={error} />
       </div>
 
       {!error && payload ? (
@@ -206,7 +244,13 @@ function AssistantTurn({
             <Stat label="Pages scraped" value={String(scrapedCount)} />
             <Stat
               label="Feedback"
-              value={feedback ? "Available" : "—"}
+              value={
+                feedback?.score != null
+                  ? `${feedback.score}/${feedback.out_of ?? 10}`
+                  : feedback
+                    ? "Available"
+                    : "—"
+              }
               accent={Boolean(feedback)}
             />
           </div>
@@ -276,20 +320,71 @@ function AssistantTurn({
               className="group mt-5 border-t border-[var(--line)] pt-5"
               data-testid="feedback-details"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm">
                 <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] transition-colors group-hover:text-white">
-                  ↳ Backend feedback
+                  ↳ Research critique
                 </span>
-                <span
-                  className="font-mono text-[11px] text-[var(--text-faint)] transition-transform duration-300 group-open:rotate-180"
-                  aria-hidden
-                >
-                  ⌃
-                </span>
+                <div className="flex items-center gap-3">
+                  {feedback.score != null ? (
+                    <span className="rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-3 py-1 font-mono text-[11px] tracking-[0.14em] text-[var(--accent)]">
+                      Score {feedback.score}/{feedback.out_of ?? 10}
+                    </span>
+                  ) : null}
+                  <span
+                    className="font-mono text-[11px] text-[var(--text-faint)] transition-transform duration-300 group-open:rotate-180"
+                    aria-hidden
+                  >
+                    ⌃
+                  </span>
+                </div>
               </summary>
-              <pre className="mt-4 overflow-x-auto whitespace-pre-wrap rounded-md border border-[var(--line)] bg-[var(--surface)] p-4 font-mono text-[12px] leading-[1.7] text-[var(--text-muted)]">
-                {feedback}
-              </pre>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
+                  <p className="kicker">Strengths</p>
+                  {feedback.strengths && feedback.strengths.length > 0 ? (
+                    <ul className="mt-3 space-y-2 text-[14px] leading-[1.65] text-[var(--text-muted)]">
+                      {feedback.strengths.map((item, i) => (
+                        <li key={`${i}-${item.slice(0, 20)}`} className="flex gap-3">
+                          <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 text-[14px] text-[var(--text-faint)]">
+                      No strengths provided.
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
+                  <p className="kicker">Areas To Improve</p>
+                  {feedback.areas_to_improve && feedback.areas_to_improve.length > 0 ? (
+                    <ul className="mt-3 space-y-2 text-[14px] leading-[1.65] text-[var(--text-muted)]">
+                      {feedback.areas_to_improve.map((item, i) => (
+                        <li key={`${i}-${item.slice(0, 20)}`} className="flex gap-3">
+                          <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#f59e0b]" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 text-[14px] text-[var(--text-faint)]">
+                      No improvement notes provided.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {feedback.verdict ? (
+                <div className="mt-4 rounded-xl border border-[var(--line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4">
+                  <p className="kicker">Verdict</p>
+                  <p className="mt-3 text-[15px] leading-[1.7] text-white">
+                    {feedback.verdict}
+                  </p>
+                </div>
+              ) : null}
             </details>
           ) : null}
         </>

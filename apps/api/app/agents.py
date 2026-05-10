@@ -60,20 +60,16 @@ critic_prompt = ChatPromptTemplate.from_messages([
 Report:
 {report}
 
-Respond in this exact format:
+Respond with valid JSON only. Do not wrap it in markdown fences.
 
-Score: X/10
-
-Strengths:
-- ...
-- ...
-
-Areas to Improve:
-- ...
-- ...
-
-One line verdict:
-..."""),
+Use this exact schema:
+{{
+  "score": 0,
+  "out_of": 10,
+  "strengths": ["..."],
+  "areas_to_improve": ["..."],
+  "verdict": "..."
+}}"""),
 ])
 
 critic_chain = critic_prompt | llm | StrOutputParser()
