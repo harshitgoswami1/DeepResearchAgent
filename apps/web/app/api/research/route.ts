@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-function getBackendUrl() {
+function getBackendUrl(request: NextRequest) {
   const configuredUrl =
     process.env.BACKEND_URL?.trim() ||
     process.env.API_URL?.trim() ||
@@ -17,18 +17,18 @@ function getBackendUrl() {
     return "http://127.0.0.1:8000";
   }
 
-  return null;
+  return `${request.nextUrl.origin}/backend`;
 }
 
 export async function POST(request: NextRequest) {
-  const backendUrl = getBackendUrl();
+  const backendUrl = getBackendUrl(request);
 
   if (!backendUrl) {
     return NextResponse.json(
       {
         error: "Backend URL is not configured.",
         details:
-          "If you are using Vercel Services, make sure the backend service is configured. Otherwise set the `API_URL` environment variable to your deployed FastAPI backend URL.",
+          "If you are using Vercel Services, make sure the backend service is mounted at `/backend`. Otherwise set the `API_URL` environment variable to your deployed FastAPI backend URL.",
       },
       { status: 500 },
     );
