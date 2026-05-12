@@ -1,5 +1,7 @@
 import json
 import re
+from datetime import datetime, timezone
+from time import perf_counter
 
 from app.agents import (
     build_reader_agent,
@@ -7,6 +9,37 @@ from app.agents import (
     critic_chain
 )
 from app.tools import format_search_results, search_web
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def build_stage(
+    key: str,
+    title: str,
+    description: str,
+    runner,
+    summary_builder=None,
+):
+    started_at = utc_now_iso()
+    stage_started = perf_counter()
+    result = runner()
+    duration_ms = int((perf_counter() - stage_started) * 1000)
+
+    stage = {
+        "key": key,
+        "title": title,
+        "description": description,
+        "started_at": started_at,
+        "completed_at": utc_now_iso(),
+        "duration_ms": duration_ms,
+    }
+
+    if summary_builder is not None:
+        stage["summary"] = summary_builder(result)
+
+    return result, stage
 
 def parse_feedback(feedback: str) -> dict:
     try:
@@ -50,17 +83,30 @@ def parse_feedback(feedback: str) -> dict:
     }
 
 def run_research_pipeline(topic: str) -> dict:
-
     state = {}
+    pipeline_started_at = utc_now_iso()
+    pipeline_started = perf_counter()
+    stages = []
 
     #search agent working
     print("\n"+" ="*50)
     print("step 1 - search agent is working ...")
     print("="*50)
 
-    state["search_results"] = search_web(
-        query=f"Find recent, reliable and detailed information about: {topic}"
+    state["search_results"], search_stage = build_stage(
+        key="search",
+        title="Search the web",
+        description="Collect recent, reliable, high-signal sources for the topic.",
+        runner=lambda: search_web(
+            query=f"Find recent, reliable and detailed information about: {topic}"
+        ),
+        summary_builder=lambda results: (
+            f"Collected {len(results)} source candidates."
+            if isinstance(results, list)
+            else "Collected search results."
+        ),
     )
+    stages.append(search_stage)
     formatted_search_results = format_search_results(state["search_results"])
 
     print("\n search result ", state["search_results"])
@@ -71,13 +117,20 @@ def run_research_pipeline(topic: str) -> dict:
     print("="*50)
 
     reader_agent = build_reader_agent()
-    reader_result = reader_agent.invoke({
-        "messages": [("user",
-            f"Based on the following search results about '{topic}', "
-            f"pick the most relevant URL and scrape it for deeper content.\n\n"
-            f"Search Results:\n{formatted_search_results[:800]}"
-        )]
-    })
+    reader_result, reader_stage = build_stage(
+        key="scrape",
+        title="Read and scrape",
+        description="Select the strongest source and extract detailed page content.",
+        runner=lambda: reader_agent.invoke({
+            "messages": [("user",
+                f"Based on the following search results about '{topic}', "
+                f"pick the most relevant URL and scrape it for deeper content.\n\n"
+                f"Search Results:\n{formatted_search_results[:800]}"
+            )]
+        }),
+        summary_builder=lambda _: "Reader agent selected a source and scraped the page.",
+    )
+    stages.append(reader_stage)
 
     state['scraped_content'] = reader_result['messages'][-1].content
 
@@ -94,10 +147,21 @@ def run_research_pipeline(topic: str) -> dict:
         f"DETAILED SCRAPED CONTENT : \n {state['scraped_content']}"
     )
 
-    state["report"] = writer_chain.invoke({
-        "topic" : topic,
-        "research" : research_combined
-    })
+    state["report"], writer_stage = build_stage(
+        key="write",
+        title="Draft report",
+        description="Synthesize the gathered material into a structured research brief.",
+        runner=lambda: writer_chain.invoke({
+            "topic" : topic,
+            "research" : research_combined
+        }),
+        summary_builder=lambda report: (
+            f"Drafted a {len(report.split())}-word report."
+            if isinstance(report, str)
+            else "Drafted the research report."
+        ),
+    )
+    stages.append(writer_stage)
 
     print("\n Final Report\n",state['report'])
 
@@ -107,12 +171,26 @@ def run_research_pipeline(topic: str) -> dict:
     print("step 4 - critic is reviewing the report ")
     print("="*50)
 
-    raw_feedback = critic_chain.invoke({
-        "report":state['report']
-    })
+    raw_feedback, critic_stage = build_stage(
+        key="critique",
+        title="Review output",
+        description="Score the brief and capture strengths, risks, and improvement notes.",
+        runner=lambda: critic_chain.invoke({
+            "report":state['report']
+        }),
+        summary_builder=lambda _: "Generated structured quality feedback for the report.",
+    )
+    stages.append(critic_stage)
     state["feedback"] = parse_feedback(raw_feedback)
 
     print("\n critic report \n", state['feedback'])
+
+    state["pipeline"] = {
+        "started_at": pipeline_started_at,
+        "completed_at": utc_now_iso(),
+        "total_duration_ms": int((perf_counter() - pipeline_started) * 1000),
+        "stages": stages,
+    }
 
     return state
 

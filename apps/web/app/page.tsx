@@ -2,6 +2,11 @@
 
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { MarkdownReport } from "./components/markdown-report";
+import {
+  PipelineLiveTimeline,
+  PipelineTimeline,
+  type PipelineRun,
+} from "./components/pipeline-timeline";
 
 const starterPrompts = [
   "Tell me about Claude Mythos",
@@ -27,9 +32,10 @@ type FeedbackRecord = {
 type ResearchResponse = {
   topic: string;
   search_results?: Array<string | SourceRecord>;
-  scraped_content?: unknown[];
+  scraped_content?: unknown[] | string | null;
   report: string;
   feedback?: FeedbackRecord | string | null;
+  pipeline?: PipelineRun;
 };
 
 type UserMessage = {
@@ -146,7 +152,15 @@ function UserTurn({ content, index }: { content: string; index: number }) {
 }
 
 /* ─── Loading state ─────────────────────────────── */
-function LoadingTurn({ topic, index }: { topic: string; index: number }) {
+function LoadingTurn({
+  topic,
+  index,
+  requestStartedAt,
+}: {
+  topic: string;
+  index: number;
+  requestStartedAt: number;
+}) {
   return (
     <div className="rise" data-testid="loading-turn">
       <div className="flex items-baseline gap-3">
@@ -175,7 +189,9 @@ function LoadingTurn({ topic, index }: { topic: string; index: number }) {
         </p>
       </div>
 
-      <div className="mt-6 space-y-2.5">
+      <PipelineLiveTimeline requestStartedAt={requestStartedAt} />
+
+      <div className="mt-5 space-y-2.5">
         {[92, 78, 88, 64].map((w, i) => (
           <div
             key={i}
@@ -209,7 +225,10 @@ function AssistantTurn({
   const feedback = normalizeFeedback(payload?.feedback);
   const scrapedCount = Array.isArray(payload?.scraped_content)
     ? payload.scraped_content.length
-    : 0;
+    : typeof payload?.scraped_content === "string" &&
+        payload.scraped_content.trim().length > 0
+      ? 1
+      : 0;
 
   return (
     <article
@@ -230,6 +249,12 @@ function AssistantTurn({
 
       {/* Body — editorial column */}
       <div className="mt-5">
+        {!error && payload?.pipeline ? (
+          <div className="mb-7 flex justify-start">
+            <PipelineTimeline pipeline={payload.pipeline} />
+          </div>
+        ) : null}
+
         <MarkdownReport content={content} error={error} />
       </div>
 
@@ -420,6 +445,7 @@ export default function Home() {
   const [topic, setTopic] = useState("");
   const [activeTopic, setActiveTopic] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requestStartedAt, setRequestStartedAt] = useState<number | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
 
@@ -447,6 +473,7 @@ export default function Home() {
     setTopic("");
     setActiveTopic(trimmedTopic);
     setIsSubmitting(true);
+    setRequestStartedAt(Date.now());
 
     try {
       const response = await fetch("/api/research", {
@@ -497,6 +524,7 @@ export default function Home() {
     } finally {
       setIsSubmitting(false);
       setActiveTopic("");
+      setRequestStartedAt(null);
     }
   }
 
@@ -681,6 +709,7 @@ export default function Home() {
                     <LoadingTurn
                       topic={activeTopic}
                       index={turnIndex + 1}
+                      requestStartedAt={requestStartedAt ?? Date.now()}
                     />
                   ) : null}
                 </div>

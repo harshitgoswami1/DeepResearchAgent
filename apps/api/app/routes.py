@@ -19,5 +19,6 @@ async def research(request: ResearchRequest):
         "search_results": result["search_results"],
         "scraped_content": result["scraped_content"],
         "report": result["report"],
-        "feedback": result["feedback"]
+        "feedback": result["feedback"],
+        "pipeline": result["pipeline"],
     }
